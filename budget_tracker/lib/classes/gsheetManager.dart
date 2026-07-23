@@ -81,7 +81,7 @@ class GSheetManager {
         ? row0[1].toString().trim()
         : row0[0].toString().trim();
     final accountNumber = row0.length > 4 ? row0[4].toString().trim() : 'N/A';
-    final year = row0.length > 11 ? row0[11].toString().trim() : '2026';
+    final year = row0.length > 12 ? row0[12].toString().trim() : '2026';
 
     final metadata = SheetMetadata(
       sheetName: sheetName,

@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:budget_tracker/classes/gsheetManager.dart';
+import 'package:budget_tracker/utils/category_utils.dart';
+import 'package:budget_tracker/widgets/budget_pie_chart_card.dart';
+import 'package:budget_tracker/widgets/selected_category_card.dart';
+import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final GSheetManager _sheetManager = GSheetManager();
   late Future<GSheetData> _sheetDataFuture;
 
-  CategoryBudget? _selectedCategory;
+  String? _selectedCategoryKey;
 
   @override
   void initState() {
@@ -21,24 +23,69 @@ class _HomeScreenState extends State<HomeScreen> {
     _sheetDataFuture = _sheetManager.fetchJaaroverzichtData();
   }
 
+  // 1. Update callback to handle nullable CategoryBudget
+  void _onCategorySelected(CategoryBudget? category) {
+    setState(() {
+      _selectedCategoryKey = category != null ? getCategoryKey(category) : null;
+    });
+  }
+
+  // 2. Update category retriever to return null if nothing is selected
+  CategoryBudget? _selectedCategoryFor(GSheetData data) {
+    if (data.categories.isEmpty || _selectedCategoryKey == null) return null;
+
+    return data.categories.firstWhere(
+      (category) => getCategoryKey(category) == _selectedCategoryKey,
+      orElse: () => data.categories.first,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: const Text('Budget PWA Dashboard'),
-        backgroundColor: const Color(0xFF1F1F1F),
+        backgroundColor: Colors.transparent, // Makes the background transparent
+        surfaceTintColor:
+            Colors.transparent, // Prevents Material 3 scroll tinting
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                _sheetDataFuture = _sheetManager.fetchJaaroverzichtData();
-              });
-            },
-          ),
-        ],
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            const Icon(Icons.account_balance_wallet),
+            const SizedBox(width: 10),
+            FutureBuilder<GSheetData>(
+              future: _sheetDataFuture,
+              builder: (context, snapshot) {
+                final metadata = snapshot.data?.metadata;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Budget Tracker'),
+                    if (metadata != null)
+                      Text(
+                        '${metadata.sheetName} • ${metadata.accountNumber} • ${metadata.year}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: Colors.white70),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              hoverColor: Colors.white24,
+              onPressed: () async {
+                setState(() {
+                  _sheetDataFuture = _sheetManager.fetchJaaroverzichtData();
+                });
+              },
+            ),
+          ],
+        ),
       ),
       body: FutureBuilder<GSheetData>(
         future: _sheetDataFuture,
@@ -56,26 +103,25 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           final data = snapshot.data!;
-          _selectedCategory ??= data.categories.isNotEmpty
-              ? data.categories.first
-              : null;
+          final selectedCategory = _selectedCategoryFor(data);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // METADATA HEADER
-                _buildHeaderCard(data.metadata),
+                _buildYearlyPieCharts(data),
                 const SizedBox(height: 20),
-
-                // COST EVOLUTION LINE CHART (fl_chart)
-                if (_selectedCategory != null) ...[
-                  _buildChartCard(data),
+                // Only shows the Line Chart Card when a category is selected
+                if (selectedCategory != null &&
+                    _selectedCategoryKey != null) ...[
+                  SelectedCategoryCard(
+                    data: data,
+                    selectedCategory: selectedCategory,
+                    selectedCategoryKey: _selectedCategoryKey!,
+                  ),
                   const SizedBox(height: 20),
                 ],
-
-                // CATEGORIES OVERVIEW LIST
                 const Text(
                   'Categories Overview',
                   style: TextStyle(
@@ -94,159 +140,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeaderCard(SheetMetadata metadata) {
-    return Card(
-      color: const Color(0xFF1E1E2C),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  metadata.sheetName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Account: ${metadata.accountNumber}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.blueAccent.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Year: ${metadata.year}',
-                style: const TextStyle(
-                  color: Colors.blueAccent,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+  Widget _buildYearlyPieCharts(GSheetData data) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Expanded(
+          child: BudgetPieChartCard(
+            title: 'Inkomsten',
+            categories: data.incomeCategories,
+            selectedCategoryKey: _selectedCategoryKey,
+            onCategorySelected: _onCategorySelected,
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildChartCard(GSheetData data) {
-    final values = _selectedCategory!.monthlyValues;
-
-    return Card(
-      color: const Color(0xFF1E1E2C),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Trend: ${_selectedCategory!.category}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                DropdownButton<CategoryBudget>(
-                  dropdownColor: const Color(0xFF2C2C3E),
-                  value: _selectedCategory,
-                  underline: const SizedBox(),
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                  items: data.categories.map((cat) {
-                    return DropdownMenuItem(
-                      value: cat,
-                      child: Text(
-                        cat.category,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedCategory = val);
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 220,
-              child: LineChart(
-                LineChartData(
-                  gridData: const FlGridData(show: false),
-                  titlesData: FlTitlesData(
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (val, meta) {
-                          int idx = val.toInt();
-                          if (idx >= 0 && idx < data.months.length) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                data.months[idx].substring(0, 3),
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            );
-                          }
-                          return const Text('');
-                        },
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: List.generate(
-                        values.length,
-                        (index) => FlSpot(index.toDouble(), values[index]),
-                      ),
-                      isCurved: true,
-                      color: Colors.tealAccent,
-                      barWidth: 3,
-                      isStrokeCapRound: true,
-                      dotData: const FlDotData(show: true),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Colors.tealAccent.withOpacity(0.15),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        const SizedBox(width: 12),
+        Expanded(
+          child: BudgetPieChartCard(
+            title: 'Uitgaven',
+            categories: data.expenseCategories,
+            selectedCategoryKey: _selectedCategoryKey,
+            onCategorySelected: _onCategorySelected,
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -257,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final cat = categories[index];
-        final isSelected = cat == _selectedCategory;
+        final isSelected = getCategoryKey(cat) == _selectedCategoryKey;
 
         return Card(
           color: isSelected ? const Color(0xFF2C2C3E) : const Color(0xFF1E1E2C),
@@ -282,9 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 16,
               ),
             ),
-            onTap: () {
-              setState(() => _selectedCategory = cat);
-            },
+            onTap: () => _onCategorySelected(cat),
           ),
         );
       },
