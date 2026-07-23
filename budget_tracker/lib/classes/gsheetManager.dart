@@ -26,8 +26,8 @@ class CategoryBudget {
     required this.monthlyValues,
   });
 
-  /// Total sum for the year (ignoring averages/totals calculated in the sheet)
-  double get yearlyTotal => monthlyValues.fold(0.0, (sum, val) => sum + val);
+  double get yearlyTotal =>
+      monthlyValues.fold(0.0, (sum, val) => sum + val).abs();
 }
 
 class GSheetData {

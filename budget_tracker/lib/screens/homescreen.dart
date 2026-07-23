@@ -191,8 +191,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             trailing: Text(
               '€${cat.yearlyTotal.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.tealAccent,
+              style: TextStyle(
+                color: cat.type == TransactionType.income
+                    ? Colors.tealAccent
+                    : Colors.redAccent,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),

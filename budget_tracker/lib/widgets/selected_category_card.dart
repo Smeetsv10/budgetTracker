@@ -72,29 +72,15 @@ class SelectedCategoryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // DropdownButton<String>(
-                //   dropdownColor: const Color(0xFF2C2C3E),
-                //   value: selectedCategoryKey,
-                //   underline: const SizedBox(),
-                //   icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                //   items: data.categories.map((cat) {
-                //     return DropdownMenuItem<String>(
-                //       value: getCategoryKey(cat),
-                //       child: Text(
-                //         cat.category,
-                //         style: const TextStyle(color: Colors.white),
-                //       ),
-                //     );
-                //   }).toList(),
-                //   onChanged: onCategoryDropdownChanged,
-                // ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               'Yearly total: €${selectedCategory.yearlyTotal.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.tealAccent,
+              style: TextStyle(
+                color: selectedCategory.type == TransactionType.income
+                    ? Colors.tealAccent
+                    : Colors.redAccent,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
