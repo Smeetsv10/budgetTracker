@@ -1,6 +1,7 @@
 import 'package:budget_tracker/classes/gsheetManager.dart';
 import 'package:budget_tracker/utils/category_utils.dart';
 import 'package:budget_tracker/widgets/budget_pie_chart_card.dart';
+import 'package:budget_tracker/widgets/monthly_pie_chart_card.dart';
 import 'package:budget_tracker/widgets/selected_category_card.dart';
 import 'package:flutter/material.dart';
 
@@ -52,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
+            const SizedBox(width: 20),
             const Icon(Icons.account_balance_wallet),
             const SizedBox(width: 10),
             FutureBuilder<GSheetData>(
@@ -112,7 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildYearlyPieCharts(data),
                 const SizedBox(height: 20),
-                // Only shows the Line Chart Card when a category is selected
                 if (selectedCategory != null &&
                     _selectedCategoryKey != null) ...[
                   SelectedCategoryCard(
@@ -122,16 +123,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
                 ],
-                const Text(
-                  'Categories Overview',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 10),
+
+                MonthlyOverviewSection(categories: data.categories),
+                const SizedBox(height: 20),
+
+                const SizedBox(height: 20),
                 _buildCategoryList(data.categories),
+
+                const SizedBox(height: 10),
               ],
             ),
           );
