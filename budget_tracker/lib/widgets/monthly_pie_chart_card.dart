@@ -24,10 +24,33 @@ class MonthlyPieChartCard extends StatefulWidget {
 class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
   int? _touchedIndex;
 
+  Color _getCategoryColor(CategoryBudget category, int index) {
+    List<Color> generatePastelColors({int count = 20}) {
+      final List<Color> colors = [];
+      const double saturation = 0.70;
+      const double lightness = 0.58;
+
+      for (int i = 0; i < count; i++) {
+        final double hue = (360.0 / count) * i;
+        final hslColor = HSLColor.fromAHSL(1.0, hue, saturation, lightness);
+        colors.add(hslColor.toColor());
+      }
+      return colors;
+    }
+
+    final normalized = category.category.toLowerCase();
+    if (normalized == 'andere' || normalized.contains('andere')) {
+      return const Color(0xFF8A8A8A);
+    }
+
+    var palette = generatePastelColors(count: 20);
+    return palette[index % palette.length];
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Only include categories that have non-zero data for this specific month
     final activeCategories = widget.categories.where((cat) {
+      if (cat.type != TransactionType.expense) return false;
       if (cat.monthlyValues.length <= widget.monthIndex) return false;
       return cat.monthlyValues[widget.monthIndex].abs() > 0.001;
     }).toList();
@@ -37,7 +60,6 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
       (sum, cat) => sum + cat.monthlyValues[widget.monthIndex].abs(),
     );
 
-    // Retrieve details for the currently touched slice/item
     CategoryBudget? touchedCategory;
     double touchedValue = 0.0;
     if (_touchedIndex != null &&
@@ -52,6 +74,7 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
       child: Card(
         color: const Color(0xFF1E1E2C),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.none,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _touchedIndex = null),
@@ -64,9 +87,9 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.monthName,
+                      'Expenses ${widget.monthName}',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                       ),
@@ -81,86 +104,94 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SizedBox(
-                  height: 180,
+                  height: 210,
                   child: monthTotal == 0.0
                       ? const Center(
                           child: Text(
-                            'No data for this month',
+                            'No expenses for this month',
                             style: TextStyle(color: Colors.white54),
                           ),
                         )
-                      : Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            PieChart(
-                              PieChartData(
-                                sectionsSpace: 2,
-                                centerSpaceRadius: 42,
-                                pieTouchData: PieTouchData(
-                                  touchCallback: (event, response) {
-                                    if (event is! FlTapUpEvent) return;
-                                    final index = response?.touchedSection
-                                            ?.touchedSectionIndex ??
-                                        -1;
-                                    setState(() {
-                                      _touchedIndex = (index >= 0 &&
-                                              index < activeCategories.length)
-                                          ? index
-                                          : null;
-                                    });
-                                  },
+                      : Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              PieChart(
+                                PieChartData(
+                                  sectionsSpace: 2,
+                                  centerSpaceRadius: 45,
+                                  pieTouchData: PieTouchData(
+                                    touchCallback: (event, response) {
+                                      if (event is! FlTapUpEvent) return;
+                                      final index = response?.touchedSection
+                                              ?.touchedSectionIndex ??
+                                          -1;
+                                      setState(() {
+                                        if (index >= 0 &&
+                                            index < activeCategories.length) {
+                                          // Toggle: if already selected, set to null. Otherwise select it.
+                                          _touchedIndex =
+                                              (_touchedIndex == index)
+                                                  ? null
+                                                  : index;
+                                        } else {
+                                          _touchedIndex = null;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  sections: _buildSections(activeCategories),
                                 ),
-                                sections: _buildSections(activeCategories),
                               ),
-                            ),
-                            // Center overlay showing selected category & actual value
-                            IgnorePointer(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (touchedCategory != null) ...[
-                                    Text(
-                                      touchedCategory.category,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.bold,
+                              IgnorePointer(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (touchedCategory != null) ...[
+                                      Text(
+                                        touchedCategory.category,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '€${touchedValue.abs().toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '€${touchedValue.abs().toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                  ] else ...[
-                                    const Text(
-                                      'Total',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white54,
+                                    ] else ...[
+                                      const Text(
+                                        'Total',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.white54,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      '€${monthTotal.toStringAsFixed(0)}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.w600,
+                                      Text(
+                                        '€${monthTotal.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                 ),
                 const SizedBox(height: 12),
@@ -181,6 +212,7 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                         final val =
                             entry.monthlyValues[widget.monthIndex].abs();
                         final isTouched = _touchedIndex == index;
+                        final masterIndex = widget.categories.indexOf(entry);
 
                         return InkWell(
                           onTap: () {
@@ -211,7 +243,10 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                                   width: 8,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: getCategoryColor(entry, index),
+                                    color: _getCategoryColor(
+                                      entry,
+                                      masterIndex >= 0 ? masterIndex : index,
+                                    ),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                 ),
@@ -247,26 +282,29 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
   }
 
   List<PieChartSectionData> _buildSections(
-    List<CategoryBudget> activeCategories,
-  ) {
+      List<CategoryBudget> activeCategories) {
     return [
       for (int i = 0; i < activeCategories.length; i++) ...[
         () {
           final cat = activeCategories[i];
           final val = cat.monthlyValues[widget.monthIndex].abs();
           final isTouched = i == _touchedIndex;
+          final masterIndex = widget.categories.indexOf(cat);
 
           return PieChartSectionData(
             value: val,
-            color: getCategoryColor(cat, i),
+            color: _getCategoryColor(
+              cat,
+              masterIndex >= 0 ? masterIndex : i,
+            ),
             title: '',
-            radius: isTouched ? 52 : 44,
+            radius: isTouched ? 46 : 38,
             borderSide: isTouched
                 ? const BorderSide(color: Colors.white, width: 2)
                 : BorderSide.none,
           );
-        }(),
-      ],
+        }()
+      ]
     ];
   }
 }
@@ -274,7 +312,10 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
 class MonthlyOverviewSection extends StatelessWidget {
   final List<CategoryBudget> categories;
 
-  const MonthlyOverviewSection({super.key, required this.categories});
+  const MonthlyOverviewSection({
+    super.key,
+    required this.categories,
+  });
 
   static const monthNames = [
     'January',
@@ -288,16 +329,20 @@ class MonthlyOverviewSection extends StatelessWidget {
     'September',
     'October',
     'November',
-    'December',
+    'December'
   ];
 
   @override
   Widget build(BuildContext context) {
+    // Filter categories using cat.type
+    final expenseCategories =
+        categories.where((c) => c.type == TransactionType.expense).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Monthly Breakdown',
+          'Monthly Expenses Breakdown',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -321,7 +366,7 @@ class MonthlyOverviewSection extends StatelessWidget {
                   MonthlyPieChartCard(
                     monthName: monthNames[monthIdx],
                     monthIndex: monthIdx,
-                    categories: categories,
+                    categories: expenseCategories,
                     width: cardWidth,
                   ),
               ],

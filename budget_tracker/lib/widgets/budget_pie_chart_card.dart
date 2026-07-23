@@ -38,7 +38,6 @@ class _BudgetPieChartCardState extends State<BudgetPieChartCard> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
         child: GestureDetector(
-          // HitTestBehavior.opaque ensures taps on empty whitespace inside the padding/column are captured
           behavior: HitTestBehavior.opaque,
           onTap: () => widget.onCategorySelected(null),
           child: Padding(
@@ -73,17 +72,23 @@ class _BudgetPieChartCardState extends State<BudgetPieChartCard> {
                               touchCallback: (event, response) {
                                 if (event is! FlTapUpEvent) return;
 
-                                final index =
-                                    response
-                                        ?.touchedSection
-                                        ?.touchedSectionIndex ??
+                                final index = response
+                                        ?.touchedSection?.touchedSectionIndex ??
                                     -1;
 
                                 if (index >= 0 &&
                                     index < widget.categories.length) {
-                                  widget.onCategorySelected(
-                                    widget.categories[index],
-                                  );
+                                  final tappedCategory =
+                                      widget.categories[index];
+                                  final tappedKey =
+                                      getCategoryKey(tappedCategory);
+
+                                  // Toggle behavior: if already selected, deselect (pass null)
+                                  if (tappedKey == widget.selectedCategoryKey) {
+                                    widget.onCategorySelected(null);
+                                  } else {
+                                    widget.onCategorySelected(tappedCategory);
+                                  }
                                 } else {
                                   // Clicked the center hole or empty chart area
                                   widget.onCategorySelected(null);
@@ -99,26 +104,34 @@ class _BudgetPieChartCardState extends State<BudgetPieChartCard> {
                   child: GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 160,
-                          mainAxisExtent: 36,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
+                      maxCrossAxisExtent: 160,
+                      mainAxisExtent: 36,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
                     itemCount: widget.categories.length,
                     itemBuilder: (context, index) {
                       final entry = widget.categories[index];
                       final percentage = total == 0.0
                           ? 0.0
                           : (entry.yearlyTotal.abs() / total) * 100;
+                      final entryKey = getCategoryKey(entry);
                       final highlighted =
-                          getCategoryKey(entry) == widget.selectedCategoryKey;
+                          entryKey == widget.selectedCategoryKey;
 
                       return _LegendItem(
                         label: entry.category,
                         percentage: percentage,
                         color: getCategoryColor(entry, index),
                         highlighted: highlighted,
-                        onTap: () => widget.onCategorySelected(entry),
+                        // Toggle behavior for legend items too
+                        onTap: () {
+                          if (highlighted) {
+                            widget.onCategorySelected(null);
+                          } else {
+                            widget.onCategorySelected(entry);
+                          }
+                        },
                       );
                     },
                   ),

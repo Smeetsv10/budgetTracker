@@ -6,7 +6,6 @@ String getCategoryKey(CategoryBudget category) {
   return '${category.type.name}:${category.category}';
 }
 
-/// Returns a consistent color based on the category's index, with a specific override for "Andere".
 Color getCategoryColor(CategoryBudget category, int index) {
   List<Color> _generatePastelColors({int count = 20}) {
     final List<Color> colors = [];

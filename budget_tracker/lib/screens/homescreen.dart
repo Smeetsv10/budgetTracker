@@ -86,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
               },
             ),
+            const SizedBox(width: 20),
           ],
         ),
       ),
@@ -123,13 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
                 ],
-
                 MonthlyOverviewSection(categories: data.categories),
                 const SizedBox(height: 20),
-
                 const SizedBox(height: 20),
                 _buildCategoryList(data.categories),
-
                 const SizedBox(height: 10),
               ],
             ),
