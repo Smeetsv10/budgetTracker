@@ -101,14 +101,11 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                                 pieTouchData: PieTouchData(
                                   touchCallback: (event, response) {
                                     if (event is! FlTapUpEvent) return;
-                                    final index =
-                                        response
-                                            ?.touchedSection
+                                    final index = response?.touchedSection
                                             ?.touchedSectionIndex ??
                                         -1;
                                     setState(() {
-                                      _touchedIndex =
-                                          (index >= 0 &&
+                                      _touchedIndex = (index >= 0 &&
                                               index < activeCategories.length)
                                           ? index
                                           : null;
@@ -173,16 +170,16 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                     child: GridView.builder(
                       gridDelegate:
                           const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 150,
-                            mainAxisExtent: 26,
-                            crossAxisSpacing: 6,
-                            mainAxisSpacing: 6,
-                          ),
+                        maxCrossAxisExtent: 150,
+                        mainAxisExtent: 26,
+                        crossAxisSpacing: 6,
+                        mainAxisSpacing: 6,
+                      ),
                       itemCount: activeCategories.length,
                       itemBuilder: (context, index) {
                         final entry = activeCategories[index];
-                        final val = entry.monthlyValues[widget.monthIndex]
-                            .abs();
+                        final val =
+                            entry.monthlyValues[widget.monthIndex].abs();
                         final isTouched = _touchedIndex == index;
 
                         return InkWell(
@@ -203,9 +200,8 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: isTouched
-                                    ? Colors.white70
-                                    : Colors.white10,
+                                color:
+                                    isTouched ? Colors.white70 : Colors.white10,
                                 width: isTouched ? 1.5 : 1.0,
                               ),
                             ),

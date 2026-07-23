@@ -107,8 +107,9 @@ class SelectedCategoryCard extends StatelessWidget {
                         interval: 1, // Fixes duplicate month labels
                         getTitlesWidget: (val, meta) {
                           final idx = val.toInt();
-                          if (val != idx.toDouble())
+                          if (val != idx.toDouble()) {
                             return const SizedBox.shrink();
+                          }
 
                           if (idx >= 0 && idx < data.months.length) {
                             return Padding(

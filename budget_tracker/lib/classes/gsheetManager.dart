@@ -165,9 +165,6 @@ class GSheetManager {
         ),
       );
     }
-    print(
-      categories.map((c) => '${c.category}: ${c.monthlyValues}').join('\n'),
-    );
 
     return GSheetData(
       metadata: metadata,
@@ -178,11 +175,8 @@ class GSheetManager {
 
   double _parseAmount(dynamic rawValue) {
     if (rawValue == null) return 0.0;
-    String str = rawValue
-        .toString()
-        .replaceAll('€', '')
-        .replaceAll(' ', '')
-        .trim();
+    String str =
+        rawValue.toString().replaceAll('€', '').replaceAll(' ', '').trim();
     if (str.isEmpty) return 0.0;
 
     // Handle European decimal comma notation (e.g., -237,79 -> -237.79)
