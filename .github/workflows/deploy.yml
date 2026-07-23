@@ -1,4 +1,4 @@
-name: Deploy Flutter Web to GitHub Pages - update
+name: Deploy Flutter Web to GitHub Pages
 
 on:
   push:
@@ -18,15 +18,16 @@ jobs:
           channel: 'stable'
 
       - name: Install Dependencies
+        working-directory: ./budget_tracker
         run: flutter pub get
 
       - name: Build Web
-        # Replace 'YOUR_REPO_NAME' with your actual repo name on GitHub
-        run: flutter build web --release --base-href "/YOUR_REPO_NAME/"
+        working-directory: ./budget_tracker
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
       - name: Deploy to GitHub Pages Branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
+          publish_dir: ./budget_tracker/build/web
           publish_branch: gh-pages
