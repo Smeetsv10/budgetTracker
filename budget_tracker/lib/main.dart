@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:budget_tracker/screens/screenManager.dart';
 import 'package:budget_tracker/screens/homescreen.dart';
-import 'package:budget_tracker/screens/labelscreen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
@@ -17,7 +17,7 @@ class MainApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         textTheme: GoogleFonts.ibmPlexMonoTextTheme(ThemeData.dark().textTheme),
       ),
-      home: const LabelScreen(),
+      home: const HomeScreen(),
     );
   }
 }
