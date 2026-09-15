@@ -138,10 +138,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildYearlyPieCharts(GSheetData data) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    // Side-by-side on desktop/tablet, stacked on mobile
+    final cardWidth = screenWidth > 700 ? (screenWidth - 48) / 2 : screenWidth;
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.spaceEvenly,
       children: [
-        Expanded(
+        SizedBox(
+          width: cardWidth,
           child: BudgetPieChartCard(
             title: 'Inkomsten',
             categories: data.incomeCategories,
@@ -149,8 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
             onCategorySelected: _onCategorySelected,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
+        SizedBox(
+          width: cardWidth,
           child: BudgetPieChartCard(
             title: 'Uitgaven',
             categories: data.expenseCategories,

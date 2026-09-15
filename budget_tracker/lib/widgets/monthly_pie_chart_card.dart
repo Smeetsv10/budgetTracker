@@ -106,7 +106,7 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: 210,
+                  height: 250,
                   child: monthTotal == 0.0
                       ? const Center(
                           child: Text(
@@ -114,87 +114,92 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                             style: TextStyle(color: Colors.white54),
                           ),
                         )
-                      : Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              PieChart(
-                                PieChartData(
-                                  sectionsSpace: 2,
-                                  centerSpaceRadius: 45,
-                                  pieTouchData: PieTouchData(
-                                    touchCallback: (event, response) {
-                                      if (event is! FlTapUpEvent) return;
-                                      final index = response?.touchedSection
-                                              ?.touchedSectionIndex ??
-                                          -1;
-                                      setState(() {
-                                        if (index >= 0 &&
-                                            index < activeCategories.length) {
-                                          // Toggle: if already selected, set to null. Otherwise select it.
-                                          _touchedIndex =
-                                              (_touchedIndex == index)
-                                                  ? null
-                                                  : index;
-                                        } else {
-                                          _touchedIndex = null;
-                                        }
-                                      });
-                                    },
-                                  ),
-                                  sections: _buildSections(activeCategories),
+                      : Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            PieChart(
+                              PieChartData(
+                                sectionsSpace: 2,
+                                centerSpaceRadius: 70,
+                                pieTouchData: PieTouchData(
+                                  touchCallback: (event, response) {
+                                    if (event is! FlTapUpEvent) return;
+                                    final index = response?.touchedSection
+                                            ?.touchedSectionIndex ??
+                                        -1;
+                                    setState(() {
+                                      if (index >= 0 &&
+                                          index < activeCategories.length) {
+                                        // Toggle: if already selected, set to null. Otherwise select it.
+                                        _touchedIndex = (_touchedIndex == index)
+                                            ? null
+                                            : index;
+                                      } else {
+                                        _touchedIndex = null;
+                                      }
+                                    });
+                                  },
                                 ),
+                                sections: _buildSections(activeCategories),
                               ),
-                              IgnorePointer(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (touchedCategory != null) ...[
-                                      Text(
-                                        touchedCategory.category,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.white70,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                            ),
+                            IgnorePointer(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (touchedCategory != null) ...[
+                                    Text(
+                                      touchedCategory.category,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '€${touchedValue.abs().toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '€${touchedValue.abs().toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ] else ...[
-                                      const Text(
-                                        'Total',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white54,
-                                        ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '(${(touchedValue.abs() / monthTotal * 100).toStringAsFixed(2)}%',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      Text(
-                                        '€${monthTotal.toStringAsFixed(0)}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white70,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    ),
+                                  ] else ...[
+                                    const Text(
+                                      'Total',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.white54,
                                       ),
-                                    ],
+                                    ),
+                                    Text(
+                                      '€${monthTotal.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ],
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 if (activeCategories.isNotEmpty)
                   SizedBox(
                     height: 90,
@@ -253,7 +258,9 @@ class _MonthlyPieChartCardState extends State<MonthlyPieChartCard> {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    '${entry.category}: €${val.toStringAsFixed(0)}',
+                                    '${entry.category}',
+
+                                    // '${entry.category}: €${val.toStringAsFixed(0)}',
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: isTouched

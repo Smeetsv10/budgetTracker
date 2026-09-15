@@ -2,6 +2,7 @@ import 'package:budget_tracker/classes/gsheetManager.dart';
 import 'package:budget_tracker/utils/category_utils.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class BudgetPieChartCard extends StatefulWidget {
   final String title;
@@ -33,6 +34,7 @@ class _BudgetPieChartCardState extends State<BudgetPieChartCard> {
 
     return SizedBox(
       height: widget.cardHeight,
+      // width: math.max(250.0, screenWidth / 2.2),
       child: Card(
         color: const Color(0xFF1E1E2C),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -104,7 +106,7 @@ class _BudgetPieChartCardState extends State<BudgetPieChartCard> {
                   child: GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 160,
+                      maxCrossAxisExtent: 240,
                       mainAxisExtent: 36,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
