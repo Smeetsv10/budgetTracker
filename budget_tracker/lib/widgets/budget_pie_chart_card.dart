@@ -106,7 +106,7 @@ class _BudgetPieChartCardState extends State<BudgetPieChartCard> {
                   child: GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 240,
+                      maxCrossAxisExtent: 500,
                       mainAxisExtent: 36,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
