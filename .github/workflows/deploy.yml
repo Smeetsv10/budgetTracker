@@ -21,14 +21,23 @@ jobs:
         with:
           channel: 'stable'
 
+      # Automatically comment out the asset reference in pubspec.yaml for CI
+      - name: Remove config.json from pubspec.yaml
+        working-directory: ./budget_tracker
+        run: |
+          sed -i 's|- assets/config.json|# - assets/config.json|g' pubspec.yaml
+
       - name: Install Dependencies
         working-directory: ./budget_tracker
         run: flutter pub get
 
       - name: Build Web
         working-directory: ./budget_tracker
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
-
+        run: |
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/" \
+            --dart-define=SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID }}" \
+            --dart-define=SHEET_GID="${{ secrets.SHEET_GID }}" \
+            --dart-define=API_KEY="${{ secrets.API_KEY }}"
       - name: Deploy to GitHub Pages Branch
         uses: peaceiris/actions-gh-pages@v4
         with:

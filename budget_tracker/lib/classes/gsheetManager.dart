@@ -1,5 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 
 enum TransactionType { income, expense }
 
@@ -49,33 +51,98 @@ class GSheetData {
 }
 
 class GSheetManager {
-  final String spreadsheetId;
-  final String gid;
+  String? _spreadsheetId;
+  String? _gid;
+  String? _apiKey;
 
-  GSheetManager({
-    this.spreadsheetId = '1Ha0-HzHil5mbr1TNa6dXkvU3aDJvyJQK6Phlq4PNT4g',
-    this.gid = '57985379',
-  });
+  GSheetManager({String? spreadsheetId, String? gid, String? apiKey}) {
+    // 1. Check if defined via GitHub Secrets / build flags (--dart-define)
+    const envSpreadsheetId = String.fromEnvironment('SPREADSHEET_ID');
+    const envGid = String.fromEnvironment('SHEET_GID');
+    const envApiKey = String.fromEnvironment('API_KEY');
 
-  Future<GSheetData> fetchJaaroverzichtData() async {
-    final url = Uri.parse(
-      'https://docs.google.com/spreadsheets/d/$spreadsheetId/export?format=csv&gid=$gid',
-    );
+    _spreadsheetId =
+        envSpreadsheetId.isNotEmpty ? envSpreadsheetId : spreadsheetId;
+    _gid = envGid.isNotEmpty ? envGid : gid;
+    _apiKey = envApiKey.isNotEmpty ? envApiKey : apiKey;
+  }
 
-    final response = await http.get(url);
+  /// Ensures configuration parameters are loaded from assets/config.json if not set via environment
+  Future<void> _ensureConfigLoaded() async {
+    if (_spreadsheetId != null && _gid != null && _apiKey != null) return;
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load sheet data: ${response.statusCode}');
+    try {
+      final jsonString = await rootBundle.loadString('assets/config.json');
+      final Map<String, dynamic> config = json.decode(jsonString);
+
+      _spreadsheetId ??= config['SPREADSHEET_ID'] as String?;
+      _gid ??= config['SHEET_GID'] as String?;
+      _apiKey ??= config['API_KEY'] as String?;
+    } catch (e) {
+      throw Exception(
+        'Failed to load config from assets/config.json and environment variables are missing: $e',
+      );
     }
 
-    // Parse CSV
-    final List<List<dynamic>> rows = csv.decode(response.body);
+    if (_spreadsheetId == null || _gid == null || _apiKey == null) {
+      throw Exception(
+          'SPREADSHEET_ID, SHEET_GID, or API_KEY missing in configuration');
+    }
+  }
 
-    if (rows.isEmpty) {
+  Future<GSheetData> fetchJaaroverzichtData() async {
+    await _ensureConfigLoaded();
+
+    // Step 1: Fetch spreadsheet metadata to map the numeric gid to the correct sheet title
+    final metaUrl = Uri.parse(
+      'https://sheets.googleapis.com/v4/spreadsheets/$_spreadsheetId?key=$_apiKey',
+    );
+    final metaResponse = await http.get(metaUrl);
+
+    if (metaResponse.statusCode != 200) {
+      throw Exception(
+          'Failed to load sheet metadata: ${metaResponse.statusCode}');
+    }
+
+    final metaData = json.decode(metaResponse.body);
+    final sheets = metaData['sheets'] as List<dynamic>;
+
+    String? sheetTitle;
+    for (var sheet in sheets) {
+      final props = sheet['properties'];
+      if (props['sheetId'].toString() == _gid) {
+        sheetTitle = props['title'];
+        break;
+      }
+    }
+
+    if (sheetTitle == null) {
+      throw Exception('Could not find sheet tab with gid: $_gid');
+    }
+
+    // Step 2: Fetch cell values using the resolved sheet title (fully CORS compatible)
+    final valuesUrl = Uri.parse(
+      'https://sheets.googleapis.com/v4/spreadsheets/$_spreadsheetId/values/${Uri.encodeComponent(sheetTitle)}?key=$_apiKey',
+    );
+    final valuesResponse = await http.get(valuesUrl);
+
+    if (valuesResponse.statusCode != 200) {
+      throw Exception(
+          'Failed to load sheet values: ${valuesResponse.statusCode}');
+    }
+
+    final valuesData = json.decode(valuesResponse.body);
+    final List<dynamic>? rawRows = valuesData['values'];
+
+    if (rawRows == null || rawRows.isEmpty) {
       throw Exception('Sheet is empty');
     }
 
-    // 1. Extract Metadata from Row 0 (Google Sheets Row 1)
+    // Convert dynamic list to List<List<dynamic>> for parsing compatibility
+    final List<List<dynamic>> rows =
+        rawRows.map((row) => row as List<dynamic>).toList();
+
+    // 3. Extract Metadata from Row 0 (Google Sheets Row 1)
     final row0 = rows[0];
     final sheetName = row0.length > 1 && row0[1].toString().trim().isNotEmpty
         ? row0[1].toString().trim()
@@ -107,7 +174,7 @@ class GSheetManager {
     final List<CategoryBudget> categories = [];
     TransactionType currentType = TransactionType.income;
 
-    // 2. Loop through data rows starting from Row 1
+    // 4. Loop through data rows starting from Row 1
     for (int r = 1; r < rows.length; r++) {
       final row = rows[r];
       if (row.isEmpty) continue;
@@ -131,15 +198,12 @@ class GSheetManager {
       }
 
       // Extract exactly 12 months from Column B (Index 1) to Column M (Index 12)
-      // Ignoring Column N (Index 13) which contains row averages/totals.
       final List<double> monthlyValues = [];
 
       for (int monthIdx = 1; monthIdx <= 12; monthIdx++) {
         if (monthIdx < row.length) {
           double val = _parseAmount(row[monthIdx]);
 
-          // Ensure sign consistency based on section if necessary
-          // Income = positive, Expense = negative
           if (currentType == TransactionType.expense && val > 0) {
             val = -val;
           }
@@ -149,7 +213,6 @@ class GSheetManager {
         }
       }
 
-      // Differentiate duplicate category names (e.g., "Andere (Inkomsten)" vs "Andere (Uitgaven)")
       String finalName = categoryName;
       if (categoryName == 'Andere') {
         finalName = currentType == TransactionType.income
@@ -175,11 +238,8 @@ class GSheetManager {
 
   double _parseAmount(dynamic rawValue) {
     if (rawValue == null) return 0.0;
-    String str = rawValue
-        .toString()
-        .replaceAll('€', '')
-        .replaceAll(' ', '')
-        .trim();
+    String str =
+        rawValue.toString().replaceAll('€', '').replaceAll(' ', '').trim();
     if (str.isEmpty) return 0.0;
 
     // Handle European decimal comma notation (e.g., -237,79 -> -237.79)

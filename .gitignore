@@ -1,0 +1,5 @@
+# ==========================================
+# Secrets, Keys & Local Configurations
+# ==========================================
+assets/config.json
+**/config.json
